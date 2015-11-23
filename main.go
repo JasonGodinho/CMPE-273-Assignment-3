@@ -47,6 +47,28 @@ type UberRequest struct {
 	CurrentIndex                 int             `json:"CurrentIndex"`
 }
 
+type UberPostRequest struct {
+	Id                        bson.ObjectId   `json:"_id" bson:"_id"`
+	Status                    string          `json:"status"`
+	Starting_from_location_id bson.ObjectId   `json:"Starting_from_location_id" bson:"Starting_from_location_id"`
+	Best_route_location_ids   []bson.ObjectId `json:"Best_route_location_ids"`
+	Total_uber_costs          float64         `json:"Total_uber_costs"`
+	Total_uber_duration       int             `json:"Total_uber_duration"`
+	Total_distance            float64         `json:"Total_distance"`
+}
+
+type UberPutRequest struct {
+	Id                           bson.ObjectId   `json:"_id" bson:"_id"`
+	Status                       string          `json:"status"`
+	Starting_from_location_id    bson.ObjectId   `json:"Starting_from_location_id" bson:"Starting_from_location_id"`
+	Next_destination_location_id bson.ObjectId   `json:"Next_destination_location_id" bson:"Next_destination_location_id"`
+	Best_route_location_ids      []bson.ObjectId `json:"Best_route_location_ids"`
+	Total_uber_costs             float64         `json:"Total_uber_costs"`
+	Total_uber_duration          int             `json:"Total_uber_duration"`
+	Total_distance               float64         `json:"Total_distance"`
+	Uber_wait_time_eta           int             `json:"uber_wait_time_eta"`
+}
+
 type JsonCoordinates struct {
 	ProductID string  `json:"product_id" bson:"product_id"`
 	StartLat  float64 `json:"start_latitude" bson:"start_latitude"`
@@ -119,7 +141,7 @@ func GetTrips(rw http.ResponseWriter, req *http.Request, p httprouter.Params) {
 
 	id := p.ByName("name")
 	Oid := bson.ObjectIdHex(id)
-	var UberGetResult UberRequest
+	var UberGetResult UberPostRequest
 	c.FindId(Oid).One(&UberGetResult)
 
 	if err != nil {
@@ -371,7 +393,7 @@ func PostTrips(rw http.ResponseWriter, req *http.Request, p httprouter.Params) {
 	Total_uber_duration += MyNewUberResultFirst.Prices[0].Duration
 	Total_distance += MyNewUberResultFirst.Prices[0].Distance
 
-	var MyUberResult UberRequest
+	var MyUberResult UberPostRequest
 
 	MyUberResult.Total_uber_costs = Total_uber_costs
 
@@ -381,7 +403,6 @@ func PostTrips(rw http.ResponseWriter, req *http.Request, p httprouter.Params) {
 	MyUberResult.Status = "Planning"
 	MyUberResult.Starting_from_location_id = bson.ObjectIdHex(Myinput1.Starting_from_location_id)
 	MyUberResult.Id = bson.NewObjectId()
-	MyUberResult.Next_destination_location_id = MyUberResult.Best_route_location_ids[0]
 
 	err = UberSession.Insert(MyUberResult)
 
@@ -394,7 +415,7 @@ func PostTrips(rw http.ResponseWriter, req *http.Request, p httprouter.Params) {
 	Oid2 := MyUberResult.Id
 	fmt.Println("Oid2")
 	fmt.Println(Oid2)
-	var UberGetResult UberRequest
+	var UberGetResult UberPostRequest
 	c.FindId(Oid2).One(&UberGetResult)
 
 	b2, err := json.Marshal(MyUberResult)
@@ -526,7 +547,11 @@ func PutTrips(rw http.ResponseWriter, req *http.Request, p httprouter.Params) {
 
 	c.UpdateId(Oidz, UberGetResult)
 
-	b2, err := json.Marshal(UberGetResult)
+	var UberPutPrint UberPutRequest
+
+	c.FindId(Oidz).One(&UberPutPrint)
+
+	b2, err := json.Marshal(UberPutPrint)
 	if err != nil {
 	}
 	rw.WriteHeader(http.StatusCreated)
@@ -574,7 +599,7 @@ func main() {
 	mux.GET("/locations/:name", Getlocations)
 	mux.GET("/trips/:name", GetTrips)
 	mux.POST("/trips", PostTrips)
-	mux.PUT("/trips/:name", PutTrips)
+	mux.PUT("/trips/:name/request", PutTrips)
 	mux.POST("/locations", Postlocations)
 	server := http.Server{
 		Addr:    "0.0.0.0:8080",
